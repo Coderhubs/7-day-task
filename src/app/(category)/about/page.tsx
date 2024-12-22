@@ -6,12 +6,12 @@ import Booking from "../../components/Booking";
 import CarCard from "../../components/ui/Carcard";
 import Button from "../../components/Button";
 import Koen from "../../../../public/images/car.jpg";
-import Rush from "../../../../public/images/car(17).jpg";
-import CR from "../../../../public/images/car(15).jpg";
-import Terols from "../../../../public/images/car(16).jpg";
+import Rush from "../../../../public/images/Car(17).jpg";
+import CR from "../../../../public/images/Car(15).jpg";
+import Terols from "../../../../public/images/Car(16).jpg";
 import MG from "../../../../public/images/Car(15).jpg"
 import Nissan from "../../../../public/images/car(1).jpg"
-import Rolls from "../../../../public/images/car(2).jpg";
+import Rolls from "../../../../public/images/Car(2).jpg";
 
 
 const carData = [
