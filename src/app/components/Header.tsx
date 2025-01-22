@@ -1,6 +1,10 @@
+"use client"
 import React from "react";
 import Image from "next/image";
 import { FaHeart, FaBell, FaCog, FaSearch } from "react-icons/fa";
+import SearchComponent from "./searchbar";
+// import SearchBar from "./searchbar";
+
 
 const Header: React.FC = () => {
   return (
@@ -20,10 +24,12 @@ const Header: React.FC = () => {
             height={32}
           />
         </div>
-
+        {/* bg-white border border-[#c3d4e9]/40 rounded-[70px] */}
         {/* Responsive Search Bar */}
-        <div className="flex items-center w-full sm:w-[492px] h-11 bg-white border border-[#c3d4e9]/40 rounded-[70px] px-4">
-          <FaSearch className="text-gray-500 w-5 h-5 hover:text-blue-500" />
+        < SearchComponent />
+        {/* <div className="flex items-center w-full sm:w-[492px] bg-white border border-[#c3d4e9]/40 rounded-[70px] h-11 px-4">
+        {/* <SearchBar /> */}
+           {/* <FaSearch className="text-gray-500 w-5 h-5 hover:text-blue-500" />
           <input
             type="text"
             placeholder="Search something here"
@@ -35,8 +41,8 @@ const Header: React.FC = () => {
             width={24}
             height={24}
             className="hidden md:block cursor-pointer"
-          />
-        </div>
+          /> 
+        </div> */ }
 
         {/* Profile and Icons */}
         <div className="flex items-center space-x-4">

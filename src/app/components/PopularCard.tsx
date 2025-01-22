@@ -1,74 +1,133 @@
-import React from "react"
-import CarCard from "./ui/Carcard";
-import Koen from "../../../public/images/car.jpg";
-import Nissan from "../../../public/images/car(1).jpg";
-import Rolls from "../../../public/images/Car(2).jpg"
+"use client"
 
+import type React from "react"
+import { useEffect, useState } from "react"
+import Link from "next/link"
+import Image from "next/image"
+import { AiFillHeart } from "react-icons/ai"
+import { BsFuelPump, BsPeople } from "react-icons/bs"
+import { PiSteeringWheel } from "react-icons/pi"
+import { client } from "@/sanity/lib/client"
 
+type CarCardProps = {
+  id:number
+  name: string
+  type: string
+  image: string
+  fuelCapacity: string
+  transmission: string
+  capacity: string
+  price: number
+  discountedPrice?: number
+  isFavorite: boolean
+}
 
-export const PopularCar: React.FC = () => {
-  const popularCars = [
-    {
-      name: "Koenigsegg",
-      type: "Sport",
-      image: Koen,
-      fuelCapacity: "90L",
-      transmission: "Manual",
-      capacity: "2 People",
-      price: 99,
-      isFavorite: true,
-    },
-    {
-      name: "Nissan GT - R",
-      type: "Sport",
-      image: Nissan,
-      fuelCapacity: "80L",
-      transmission: "Manual",
-      capacity: "2 People",
-      price: 80,
-      discountedPrice: 100,
-      isFavorite: false,
-    },
-    {
-      name: "Rolls - Royce",
-      type: "Sedan",
-      image: Rolls,
-      fuelCapacity: "70L",
-      transmission: "Manual",
-      capacity: "4 People",
-      price: 96,
-      isFavorite: true,
-    },
-    {
-      name: "Nissan GT - R",
-      type: "Sport",
-      image: Nissan,
-      fuelCapacity: "80L",
-      transmission: "Manual",
-      capacity: "2 People",
-      price: 80,
-      discountedPrice: 100,
-      isFavorite: false,
-    },
-  ]
+const CarCard: React.FC<CarCardProps> = ({
+  id,
+  name,
+  type,
+  image,
+  fuelCapacity,
+  transmission,
+  capacity,
+  price,
+  discountedPrice,
+  isFavorite: initialFavorite,
+}) => {
+  const [isFavorite, setIsFavorite] = useState(initialFavorite)
 
   return (
-    <div className="p-6 bg-gray-100 md:p-10">
-      <div className="flex justify-between items-center mb-8">
-
-        <h2 className="text-[20px] font-bold text-[#1A202C]">Popular Cars</h2>
-
-        <button className="text-[#3563E9] text-sm font-semibold hover:underline">
-          View All
+    <div className="bg-white rounded-[10px] p-4 hover:shadow-md transition-shadow duration-200">
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h3 className="text-[20px] font-semibold text-[#1A202C]">{name}</h3>
+          <p className="text-[14px] text-[#90A3BF]">{type}</p>
+        </div>
+        <button onClick={() => setIsFavorite(!isFavorite)} className="p-1 hover:opacity-80 transition-opacity">
+          <AiFillHeart className={`h-5 w-5 ${isFavorite ? "text-red-500" : "text-[#D7E5FF]"}`} />
         </button>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-        {popularCars.map((car, index) => (
-          <CarCard key={index} {...car} />
-        ))}
+
+      <div className="relative h-[140px] my-6">
+        <Image
+          src={image || "/placeholder.svg"}
+          alt={`${name} car`}
+          fill
+          className="object-contain"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="flex items-center gap-2">
+          <BsFuelPump className="text-[#90A3BF] w-4 h-4" />
+          <span className="text-sm text-[#90A3BF]">{fuelCapacity}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <PiSteeringWheel className="text-[#90A3BF] w-4 h-4" />
+          <span className="text-sm text-[#90A3BF]">{transmission}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <BsPeople className="text-[#90A3BF] w-4 h-4" />
+          <span className="text-xs text-[#90A3BF]">{capacity}</span>
+        </div>
+      </div>
+
+      <div className="flex justify-between items-end">
+        <div>
+          <div className="flex items-baseline gap-1">
+            <span className="text-[18px] font-semibold text-[#1A202C]">${price}</span>
+            <span className="text-[14px] text-[#90A3BF]">/day</span>
+          </div>
+          {discountedPrice && <p className="text-[14px] text-[#90A3BF] line-through">${discountedPrice}</p>}
+        </div>
+        <Link href={`/detail/${id}`}>
+          <button className="bg-[#3563E9] text-white px-5 py-2 rounded-[4px] text-[14px] font-semibold hover:bg-blue-600 transition-colors">
+            Rent Now
+          </button>
+        </Link>
       </div>
     </div>
   )
 }
 
+const PopularCar: React.FC = () => {
+  const [cars, setCars] = useState<CarCardProps[]>([])
+
+  useEffect(() => {
+    const fetchCars = async () => {
+      const carsData = await client.fetch(`*[_type == "cars" && "popular" in tags]{
+        id,
+        name,
+        type,
+        "image": image.asset->url,
+        "fuelCapacity": fuel_capacity,
+        "transmission": transmission,
+        "capacity": seating_capacity,
+        "price": price_per_day,
+        "discountedPrice": original_price,
+        "isFavorite": false
+      }`)
+      setCars(carsData)
+    }
+    fetchCars()
+  }, [])
+
+  return (
+    <section className="p-6 bg-gray-50">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-md font-bold text-[#aeafb3]">Popular Cars</h2>
+          <button className="text-[#3563E9] text-sm font-semibold hover:underline">View All</button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {cars.map((car) => (
+            <CarCard key={car.name} {...car} />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
 export default PopularCar
+
