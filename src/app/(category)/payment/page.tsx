@@ -1,3 +1,4 @@
+
 "use client";
 import Image from "next/image";
 import React, { useState } from "react";
@@ -5,11 +6,8 @@ import { CiStar } from "react-icons/ci";
 import { FaStar } from "react-icons/fa";
 import { FormData, BillingInfo, Reservation, CreditCardDetails } from "../../components/format";
 import { client } from "@/sanity/lib/client";
-// import CheckoutPage from "@/app/components/checkout";
-// import { Elements } from "@stripe/react-stripe-js";
-// import convertToSubcurrency from "@/app/lib/convertToSubcurrency";
-import { loadStripe } from "@stripe/stripe-js";
 import Link from "next/link";
+
 
 const RentalForm: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
@@ -106,16 +104,14 @@ const RentalForm: React.FC = () => {
       setIsSubmitting(false);
     }
   };
-  const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY || '');
 
-  const [amount, setAmount] = useState<number | null>(null);
-
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value);
-    setAmount(isNaN(value) ? null : value);
-  };
-
+  // console.log('Sanity Config:', {
+  //   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
+  //   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET,
+  //   token: process.env.SANITY_API_TOKEN,
+  // });
   
+
   return (
     <div className="min-h-screen bg-gray-100 flex justify-center items-center">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-14">
@@ -294,16 +290,12 @@ const RentalForm: React.FC = () => {
                       className="w-[92px] h-[20px]"
                     />
                   </div>
-
                 </div>
-              
-
               </section>
 
               {/* Confirmation */}
               <section className="p-4 sm:p-6 lg:p-8 border rounded-lg bg-white">
                 <h2 className="text-xl font-bold">Confirmation</h2>
-
                 <p className="text-gray-500">We are getting to the end. Just a few clicks and your rental is ready!</p>
                 <div className="space-y-4">
                   <label className="flex items-center gap-2 p-3 border rounded-md bg-gray-100">
@@ -328,7 +320,6 @@ const RentalForm: React.FC = () => {
                     We are using the most advanced security to provide you the best experience ever.
                   </p>
                 </div>
-
                 {/* Submission status */}
                 {submitError && <div className="text-red-500 mb-4">{submitError}</div>}
                 {submitSuccess && <div className="text-green-500 mb-4">Form submitted successfully!</div>}
@@ -343,47 +334,19 @@ const RentalForm: React.FC = () => {
                   }
                 >
                   {isSubmitting ? "Submitting..." : "Rent Now"}
-                  
                 </button>
-                <div className="mt-6">
+
                 <Link href="/stripe-testing">
        <button className="bg-[#3563E9] w-[120px] md:w-[140px] h-[48px] md:h-[56px] text-white rounded-md font-medium hover:bg-blue-600">
            Pay Now
          </button>
          
         </Link>
-        </div>
-        
               </section>
-              <div>
-      
-              {/* <div className="mt-8 p-6 bg-white shadow-md rounded-md">
-          <h2 className="text-xl font-semibold mb-4">Payment Section</h2>
-          <label className="block text-gray-600 mb-2">Enter Amount</label>
-          <input
-            type="number"
-            placeholder="Enter amount to pay"
-            value={amount ?? ""}
-            onChange={handleAmountChange}
-            className="input w-full p-2 border rounded-md mb-4"
-          />
-          {amount !== null && (
-            <Elements
-              stripe={stripePromise}
-              options={{
-                mode: "payment",
-                amount: convertToSubcurrency(amount),
-                currency: "usd",
-              }}
-            >
-              <CheckoutPage amount={amount} />
-            </Elements>
-          )}
-        </div> */}
-              </div>
             </form>
+           
           </div>
-        
+         
 
           {/* Right Section (Summary) */}
           <div className="order-1 lg:order-2 space-y-8">
@@ -438,9 +401,7 @@ const RentalForm: React.FC = () => {
                   </span>
                 </div>
                 <span className="text-3xl font-bold">$80.00</span>
-              </div> 
-
-
+              </div>
             </section>
           </div>
         </div>

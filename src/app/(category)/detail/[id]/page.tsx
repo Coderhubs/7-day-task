@@ -28,23 +28,7 @@ interface car {
     description: string
   }
 
-// const ProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
-//   const { id } = await params;
 
-//   const query = `
-//   *[_type == "product" && _id == "${id}"]{
-//     _id,
-//     productName,
-//     category,
-//     price,
-//     inventory,
-//     colors,
-//     status,
-//     "imageUrl": image.asset->url,
-//     description
-//   }[0]`;
-
-//   const product: Product = await client.fetch(query);
 const Detail = async({ params }: { params: Promise<{ id: number }> }) => {
   const { id } = await params;
   // const thumbnails = [v1, v2, v3];
