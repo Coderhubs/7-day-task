@@ -336,12 +336,14 @@ const RentalForm: React.FC = () => {
                   {isSubmitting ? "Submitting..." : "Rent Now"}
                 </button>
 
+<div className="mt-6">
                 <Link href="/stripe-testing">
        <button className="bg-[#3563E9] w-[120px] md:w-[140px] h-[48px] md:h-[56px] text-white rounded-md font-medium hover:bg-blue-600">
            Pay Now
          </button>
          
         </Link>
+        </div>
               </section>
             </form>
            
