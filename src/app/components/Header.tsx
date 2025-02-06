@@ -110,7 +110,7 @@ const Header: React.FC = () => {
             placeholder="Search something here"
             className="flex-grow bg-transparent outline-none text-gray-700 ml-2 placeholder-gray-400"
           />
-            <button className="rounded-full bg-gray-200 hover:bg-gray-300 p-2">
+            <button className=" hover:bg-gray-300 p-2">
       <SlidersHorizontal className="w-5 h-5" />
     </button>
         {/* <SearchBar searchParams={{ term: '' }} /> */}
