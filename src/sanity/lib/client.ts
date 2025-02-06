@@ -15,9 +15,6 @@ export const client = createClient({
  
   // // Set to false if statically generating pages, using ISR or tag-based revalidation
 })
-console.log(process.env.NEXT_PUBLIC_SANITY_PROJECT_ID);
-console.log(process.env.NEXT_PUBLIC_SANITY_DATASET);
-console.log( process.env.SANITY_API_TOKEN);
 
 
 

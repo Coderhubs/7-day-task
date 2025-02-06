@@ -1,13 +1,12 @@
-
 "use client";
 import Image from "next/image";
-import React, { useState } from "react";
-import { CiStar } from "react-icons/ci";
-import { FaStar } from "react-icons/fa";
+import React, { useState, useEffect, useCallback } from "react";
 import { FormData, BillingInfo, Reservation, CreditCardDetails } from "../../components/format";
 import { client } from "@/sanity/lib/client";
-import Link from "next/link";
 
+import { useSearchParams, useRouter } from 'next/navigation';
+import Rating from "@/app/components/rating";
+import { IoInformationCircleOutline } from "react-icons/io5";
 
 const RentalForm: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
@@ -35,6 +34,59 @@ const RentalForm: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const [carDetails, setCarDetails] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const searchParams = useSearchParams();
+
+  const [promoCode, setPromoCode] = useState<string>('');
+  const [appliedPromo, setAppliedPromo] = useState<boolean>(false);
+  const [totalPrice, setTotalPrice] = useState<number>(0);
+
+  // Add duration state
+  const [rentalDuration, setRentalDuration] = useState<number>(1);
+
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchCarDetails = async () => {
+      try {
+        const carId = searchParams.get('id');
+        
+        if (!carId) {
+          setIsLoading(false);
+          return;
+        }
+
+        const query = `*[_type == "cars" && _id == "${carId}"][0]{
+          id,
+          name,
+          type,
+          "image": image.asset->url,
+          "image_1": image_1.asset->url,
+          "image_2": image_2.asset->url,
+          "image_3": image_3.asset->url,
+          "fuelCapacity": fuel_capacity,
+          "transmission": transmission,
+          "capacity": seating_capacity,
+          "price": price_per_day,
+          "discountedPrice": original_price,
+          description,
+          _id
+        }`;
+
+        const car = await client.fetch(query);
+        console.log('Fetched car:', car); // Debug log
+        setCarDetails(car);
+      } catch (error) {
+        console.error('Error fetching car details:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCarDetails();
+  }, [searchParams]);
 
   const handleInputChange = <T extends keyof FormData>(section: T, field: keyof FormData[T], value: string) => {
     setFormData((prevData) => ({
@@ -104,13 +156,100 @@ const RentalForm: React.FC = () => {
       setIsSubmitting(false);
     }
   };
-
-  // console.log('Sanity Config:', {
-  //   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
-  //   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET,
-  //   token: process.env.SANITY_API_TOKEN,
-  // });
   
+  const calculatePrices = useCallback(() => {
+    if (!carDetails?.price) return { subtotal: 0, tax: 0, total: 0, discount: 0, numberOfDays: rentalDuration, pricePerDay: 0 };
+    
+    const pricePerDay = Number(carDetails.price);
+    const subtotal = pricePerDay * rentalDuration;
+    const taxRate = 0.10;
+    const tax = subtotal * taxRate;
+    let discount = 0;
+    
+    if (appliedPromo) {
+      discount = subtotal * 0.15;
+    }
+    
+    const total = subtotal + tax - discount;
+    
+    return {
+      subtotal: parseFloat(subtotal.toFixed(2)),
+      tax: parseFloat(tax.toFixed(2)),
+      discount: parseFloat(discount.toFixed(2)),
+      total: parseFloat(total.toFixed(2)),
+      numberOfDays: rentalDuration,
+      pricePerDay: parseFloat(pricePerDay.toFixed(2))
+    };
+  }, [carDetails?.price, rentalDuration, appliedPromo]);
+
+  const handleApplyPromo = () => {
+    if (promoCode.toUpperCase() === 'MORENT15') {
+      setAppliedPromo(true);
+      const prices = calculatePrices();
+      setTotalPrice(prices.total);
+    } else {
+      setAppliedPromo(false);
+      // Show error message
+      const errorMessage = document.getElementById('promoError');
+      if (errorMessage) {
+        errorMessage.classList.remove('hidden');
+        setTimeout(() => {
+          errorMessage.classList.add('hidden');
+        }, 3000);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (carDetails?.price) {
+      const prices = calculatePrices();
+      setTotalPrice(prices.total);
+    }
+  }, [carDetails, appliedPromo, formData.reservation.pickupDate, formData.reservation.dropDate, calculatePrices]);
+
+  const handleDateChange = (type: 'pickupDate' | 'dropDate', value: string) => {
+    handleInputChange("reservation", type, value);
+    
+    // Recalculate prices when dates change
+    const prices = calculatePrices();
+    setTotalPrice(prices.total);
+  };
+
+  // Add duration change handler
+  const handleDurationChange = (value: number) => {
+    setRentalDuration(value);
+    const prices = calculatePrices();
+    setTotalPrice(prices.total);
+  };
+
+  const handlePayment = () => {
+    const prices = calculatePrices();
+    
+    // Debug log to see the form structure
+    console.log('Billing Info:', formData.billingInfo);
+    
+    const paymentDetails = {
+      amount: prices.total,
+      carName: carDetails?.name || '',
+      name: formData.billingInfo.name || '', // Make sure this matches your form field
+      rentalDuration: rentalDuration,
+      pickupDate: formData.reservation.pickupDate,
+      dropDate: formData.reservation.dropDate,
+      carImage: carDetails?.image || '',
+      subtotal: prices.subtotal,
+      tax: prices.tax,
+      discount: prices.discount
+    };
+
+    console.log('Payment Details being sent:', paymentDetails); // Debug log
+
+    const queryString = Object.entries(paymentDetails)
+      .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+      .join('&');
+
+    const url = `/stripe-testing?${queryString}`;
+    router.push(url);
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 flex justify-center items-center">
@@ -151,7 +290,7 @@ const RentalForm: React.FC = () => {
               <section className="p-4 sm:p-6 lg:p-8 border rounded-lg bg-white">
                 <h2 className="text-xl font-bold">Rental Info</h2>
                 <div className="flex justify-between items-center">
-                  <p className="text-gray-500">Please select your rental info</p>
+                  <p className="text-gray-500">Please select your rental date</p>
                   <p className="text-gray-500">Step 2 of 4</p>
                 </div>
                 <div className="space-y-6">
@@ -161,7 +300,12 @@ const RentalForm: React.FC = () => {
                   ].map((item) => (
                     <div key={item.type} className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <input type="radio" name="rentalType" id={item.type} defaultChecked={item.type === "pickup"} />
+                        <input 
+                          type="radio" 
+                          name="rentalType" 
+                          id={item.type} 
+                          defaultChecked={item.type === "pickup"} 
+                        />
                         <label htmlFor={item.type}>{item.label}</label>
                       </div>
                       <div className="grid sm:grid-cols-2 gap-6">
@@ -180,7 +324,12 @@ const RentalForm: React.FC = () => {
                               placeholder={field.label}
                               className="w-full p-3 rounded-md bg-gray-100"
                               value={formData.reservation[field.name]}
-                              onChange={(e) => handleInputChange("reservation", field.name, e.target.value)}
+                              onChange={(e) => 
+                                field.label === "Date" 
+                                  ? handleDateChange(field.name as 'pickupDate' | 'dropDate', e.target.value)
+                                  : handleInputChange("reservation", field.name, e.target.value)
+                              }
+                              min={field.label === "Date" && item.type === "drop" ? formData.reservation.pickupDate : undefined}
                               required
                             />
                           </div>
@@ -336,81 +485,194 @@ const RentalForm: React.FC = () => {
                   {isSubmitting ? "Submitting..." : "Rent Now"}
                 </button>
 
-<div className="mt-6">
-                <Link href="/stripe-testing">
-       <button className="bg-[#3563E9] w-[120px] md:w-[140px] h-[48px] md:h-[56px] text-white rounded-md font-medium hover:bg-blue-600">
-           Pay Now
-         </button>
-         
-        </Link>
-        </div>
+                <div className="mt-6">
+                  <button 
+                    onClick={handlePayment}
+                    className="bg-[#3563E9] w-[120px] md:w-[140px] h-[48px] md:h-[56px] text-white rounded-md font-medium hover:bg-blue-600"
+                  >
+                    Pay Now
+                  </button>
+                </div>
               </section>
             </form>
            
           </div>
-         
 
+         
+{/* 
           {/* Right Section (Summary) */}
           <div className="order-1 lg:order-2 space-y-8">
           
-            <section className="p-4 sm:p-6 lg:p-8 border rounded-lg  bg-white">
-              <h2 className="text-xl font-bold mb-4">Rental Summary</h2>
-              <p className="text-gray-500 mb-8">
-                Prices may change depending on the length of the rental and the price of your rental car.
-              </p>
-              <div className="flex items-center space-x-4">
-                <Image
-                  src="/images/a.png"
-                  alt="Car"
-                  width={100}
-                  height={100}
-                  className="w-[132px] h-[108px] rounded-lg object-cover"
-                />
-                <div>
-                  <h3 className="text-3xl font-bold">Nissan GT - R</h3>
-                  <div className="flex items-center gap-[4px]">
-                    <p className="text-yellow-500 flex items-center gap-[2px]">
-                      <FaStar />
-                      <FaStar />
-                      <FaStar />
-                      <FaStar />
-                      <CiStar />
-                    </p>
-                    <p className="text-gray-500"> 440+ Reviews</p>
+          
+            
+      
+                <section className="p-4 sm:p-6 lg:p-8 border rounded-lg  bg-white">
+                  <h2 className="text-xl font-bold mb-4">Rental Summary</h2>
+                  <p className="text-gray-500 mb-8">
+                    Prices may change depending on the length of the rental and the price of your rental car.
+                  </p>
+                  <div className="flex items-center space-x-4">
+                    <div className="relative w-[132px] h-[108px] bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg overflow-hidden">
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent)]" />
+                      <Image
+                        src={carDetails?.image}
+                        alt={carDetails?.name || "Car"}
+                        width={132}
+                        height={108}
+                        className="w-full h-full object-contain p-2"
+                        priority
+                      />
+                    </div>
+                    <div>
+                      <h3 className="text-3xl font-bold">{carDetails?.name}</h3>
+                      <div className="flex items-center gap-[4px]">
+                        <p className="text-yellow-500 flex items-center gap-[2px]">
+                         
+                           <Rating />
+                        </p>
+                       
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              <hr className="text-gray-500 mt-10" />
-              <div className="mt-4 space-y-2">
-                <div className="flex justify-between text-gray-700">
-                  <span className="font-medium text-base text-[#90A3BF]">Subtotal</span>
-                  <span className="font-semibold text-base ">$80.00</span>
-                </div>
-                <div className="flex justify-between text-gray-700">
-                  <span className="font-medium text-base text-[#90A3BF]">Tax</span>
-                  <span className="font-semibold text-base ">$0</span>
-                </div>
-              </div>
-              <div className="my-5 flex justify-between items-center p-3 border rounded-lg w-full h-[56px]">
-                <span className="font-medium text-base text-[#90A3BF]">Apply promo code </span>
-                <span className="font-medium mx-4 text-base">Apply code</span>
-              </div>
-              <div className="mt-4 flex justify-between items-center font-bold text-lg gap-1">
-                <div className="flex flex-col">
-                  <span>Total Rental Price</span>
-                  <span className="font-medium text-sm text-[#90A3BF] px-1">
-                    Overall price and includes rental discount
-                  </span>
-                </div>
-                <span className="text-3xl font-bold">$80.00</span>
-              </div>
-            </section>
+                  <hr className="text-gray-500 mt-10" />
+                  <div className="space-y-6">
+                    {/* Rental Duration Selector */}
+                    <div className="flex justify-between items-center">
+                      <div className="flex flex-col">
+                        <span className="text-[#90A3BF] font-medium">Rental Duration</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <button 
+                          onClick={() => handleDurationChange(Math.max(1, rentalDuration - 1))}
+                          className="w-8 h-8 rounded-full bg-[#F6F7F9] flex items-center justify-center text-[#90A3BF] hover:bg-[#3563E9] hover:text-white transition-colors"
+                        >
+                          -
+                        </button>
+                        <span className="font-semibold min-w-[40px] text-center">
+                          {rentalDuration} day{rentalDuration > 1 ? 's' : ''}
+                        </span>
+                        <button 
+                          onClick={() => handleDurationChange(rentalDuration + 1)}
+                          className="w-8 h-8 rounded-full bg-[#F6F7F9] flex items-center justify-center text-[#90A3BF] hover:bg-[#3563E9] hover:text-white transition-colors"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Price per Day */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#90A3BF] font-medium">Price per Day</span>
+                      <span className="font-semibold">${calculatePrices().pricePerDay}</span>
+                    </div>
+
+                    {/* Subtotal with duration calculation */}
+                    <div className="flex justify-between items-center">
+                      <div className="flex flex-col">
+                        <span className="text-[#90A3BF] font-medium">Subtotal</span>
+                        <span className="text-xs text-[#90A3BF]">
+                          (${calculatePrices().pricePerDay} × {rentalDuration} days)
+                        </span>
+                      </div>
+                      <span className="font-semibold">${calculatePrices().subtotal}</span>
+                    </div>
+
+                    {/* Tax */}
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[#90A3BF] font-medium">Tax</span>
+                        <span className="text-xs text-[#90A3BF]">(10%)</span>
+                      </div>
+                      <span className="font-semibold">${calculatePrices().tax}</span>
+                    </div>
+
+                    {/* Promo Code Section */}
+                    <div className="space-y-2">
+                      <div className="relative group">
+                        <button className="flex items-center gap-1 text-sm text-[#90A3BF] hover:text-[#3563E9]">
+                          <IoInformationCircleOutline className="w-5 h-5" />
+                          <span>Available discounts</span>
+                        </button>
+                        
+                        {/* Tooltip */}
+                        <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-10">
+                          <div className="bg-white shadow-lg rounded-lg p-4 w-64 border border-gray-100">
+                            <h4 className="font-semibold text-sm text-gray-800 mb-2">Available Offers:</h4>
+                            <ul className="space-y-2 text-sm">
+                              <li className="flex items-center gap-2">
+                                <span className="w-2 h-2 bg-[#3563E9] rounded-full"></span>
+                                <span>15% off on your first booking</span>
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <span className="w-2 h-2 bg-[#3563E9] rounded-full"></span>
+                                <span>Special weekend discounts</span>
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center p-3 border rounded-lg w-full h-[56px] bg-[#F6F7F9]">
+                        <input
+                          type="text"
+                          placeholder="Got a promo code? Enter here"
+                          value={promoCode}
+                          onChange={(e) => setPromoCode(e.target.value)}
+                          className="flex-1 bg-transparent outline-none font-medium text-base text-[#90A3BF] placeholder:text-[#90A3BF]"
+                        />
+                        <button
+                          onClick={handleApplyPromo}
+                          className={`w-[120px] px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
+                            appliedPromo 
+                              ? 'bg-green-500 text-white' 
+                              : 'bg-[#3563E9] text-white hover:bg-[#2651CD] hover:shadow-md'
+                          }`}
+                        >
+                          {appliedPromo ? (
+                            <div className="flex items-center gap-2">
+                              <span>Applied</span>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          ) : (
+                            'Apply'
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Discount (if applied) */}
+                      {appliedPromo && (
+                        <div className="flex justify-between items-center text-green-500">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Discount</span>
+                            <span className="text-xs">(15%)</span>
+                          </div>
+                          <span className="font-semibold">-${calculatePrices().discount}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Total Price */}
+                    <div className="border-t pt-4">
+                      <div className="flex justify-between items-center">
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-lg">Total Rental Price</h4>
+                          <p className="text-sm text-[#90A3BF]">
+                            Overall price for {rentalDuration} day{rentalDuration > 1 ? 's' : ''} rental
+                          </p>
+                        </div>
+                        <span className="text-3xl font-bold">${calculatePrices().total}</span>
+                      </div>
+                    </div>
+                  </div>
+                </section> 
           </div>
         </div>
       </div>
-    </div>
+      </div>
   
   );
-};
+}
 
 export default RentalForm;

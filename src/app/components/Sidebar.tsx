@@ -1,9 +1,12 @@
 "use client"
 
 import * as React from "react"
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Checkbox } from "./ui/checkbox"
 import { Label } from "./ui/label"
 import { Slider } from "./ui/slider"
+import { useFilterStore } from "@/app/store/filterstore"
+import { useCallback } from 'react';
 
 interface FilterOption {
   label: string
@@ -39,9 +42,82 @@ const filterData: FilterSection[] = [
   },
 ]
 
-export default function FilterSidebar() {
+interface SidebarProps {
+  onFilterChange?: (filters: {
+    types: string[];
+    capacity: string[];
+    maxPrice: number;
+  }) => void;
+}
+
+export default function FilterSidebar({ onFilterChange }: SidebarProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
+  // State for filters
+  const [selectedTypes, setSelectedTypes] = React.useState<string[]>([])
+  const [selectedCapacity, setSelectedCapacity] = React.useState<string[]>([])
   const [price, setPrice] = React.useState([100])
   const [isOpen, setIsOpen] = React.useState(false)
+  const setGlobalFilters = useFilterStore((state) => state.setFilters)
+
+  // Update filters and URL
+  const updateFilters = useCallback(() => {
+    const filters = {
+      types: selectedTypes,
+      capacity: selectedCapacity,
+      maxPrice: price[0]
+    }
+
+    // Update global filter state
+    setGlobalFilters(filters)
+
+    // Call the callback if provided
+    onFilterChange?.(filters)
+
+    // Update URL parameters
+    const params = new URLSearchParams(searchParams.toString())
+    
+    if (selectedTypes.length) {
+      params.set('types', selectedTypes.join(','))
+    } else {
+      params.delete('types')
+    }
+    
+    if (selectedCapacity.length) {
+      params.set('capacity', selectedCapacity.join(','))
+    } else {
+      params.delete('capacity')
+    }
+    
+    params.set('maxPrice', price[0].toString())
+    
+    router.push(`?${params.toString()}`)
+  }, [selectedTypes, selectedCapacity, price, searchParams, setGlobalFilters, router, onFilterChange])
+
+  // Handle checkbox changes
+  const handleTypeChange = (type: string, checked: boolean) => {
+    setSelectedTypes(prev => {
+      const newTypes = checked 
+        ? [...prev, type]
+        : prev.filter(t => t !== type)
+      return newTypes
+    })
+  }
+
+  const handleCapacityChange = (capacity: string, checked: boolean) => {
+    setSelectedCapacity(prev => {
+      const newCapacity = checked 
+        ? [...prev, capacity]
+        : prev.filter(c => c !== capacity)
+      return newCapacity
+    })
+  }
+
+  // Effect to update filters when changes occur
+  React.useEffect(() => {
+    updateFilters()
+  }, [updateFilters])
 
   const toggleMenu = () => {
     setIsOpen(!isOpen)
@@ -86,6 +162,13 @@ export default function FilterSidebar() {
                   <Checkbox
                     id={option.label}
                     defaultChecked={option.checked}
+                    onCheckedChange={(checked) => {
+                      if (section.title === "TYPE") {
+                        handleTypeChange(option.label, checked as boolean)
+                      } else if (section.title === "CAPACITY") {
+                        handleCapacityChange(option.label, checked as boolean)
+                      }
+                    }}
                     className="rounded-md"
                   />
                   <Label
@@ -110,11 +193,13 @@ export default function FilterSidebar() {
           </h3>
           <div className="space-y-4">
             <Slider
-              defaultValue={[100]}
-              max={100}
+              defaultValue={[200]}
+              max={200}
               step={1}
               value={price}
-              onValueChange={setPrice}
+              onValueChange={(value) => {
+                setPrice(value)
+              }}
               className="py-4"
             />
             <div className="text-sm">Max. ${price[0]}.00</div>

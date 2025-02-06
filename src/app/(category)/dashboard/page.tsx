@@ -6,6 +6,7 @@ import Nissan from "../../../../public/images/car(1).jpg";
 import Koen from "../../../../public/images/car.jpg";
 import Rolls from "../../../../public/images/Car(2).jpg";
 import CR from "../../../../public/images/Car(14).jpg";
+import MapComponent from "@/app/components/Mapbox";
 
 const Dashboard = () => {
   // Data for the donut chart
@@ -138,17 +139,10 @@ const Dashboard = () => {
             <h2 className="text-lg font-semibold mb-4">Details Rental</h2>
 
             {/* Map */}
-            <div className="mb-4">
-              <Image
-                src="/images/map.png"
-                alt="Map Image"
-                className="w-full rounded-lg shadow-sm"
-                width={500}
-                height={200}
-                layout="responsive"
-              />
+            <div className="mb-16">
+              < MapComponent />
             </div>
-
+ 
             {/* Car Details */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
               <Image
