@@ -6,6 +6,8 @@ import { useSearch } from "../components/context/SearchContext";
 import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useFavoriteStore } from '@/app/store/favoriteStore';
+import { SlidersHorizontal } from "lucide-react"
+
 
 // Darakshan
 
@@ -108,15 +110,10 @@ const Header: React.FC = () => {
             placeholder="Search something here"
             className="flex-grow bg-transparent outline-none text-gray-700 ml-2 placeholder-gray-400"
           />
-          <Image
-            src="/images/filter.jpg"
-            alt="filter"
-            width={24}
-            height={24}
-            className="hidden md:block cursor-pointer"
-            onClick={() => setIsFilterBarOpen(!isFilterBarOpen)}
-          /> 
-                  {/* <SearchBar searchParams={{ term: '' }} /> */}
+            <button className="rounded-full bg-gray-200 hover:bg-gray-300 p-2">
+      <SlidersHorizontal className="w-5 h-5" />
+    </button>
+        {/* <SearchBar searchParams={{ term: '' }} /> */}
 
         </div> 
 
